@@ -19,7 +19,7 @@ if (isset($_SESSION['id_admin'])) {
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white text-center">
-                    <h4>Login Aplikasi</h4>
+                    <h4>Login Admin</h4>
                 </div>
                 <div class="card-body">
                     <?php if (isset($_GET['pesan'])): ?>

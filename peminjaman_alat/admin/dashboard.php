@@ -60,7 +60,7 @@ $total_transaksi = $data_transaksi['total'];
                 </ul>
                 <ul class="navbar-nav align-items-center">
                     <li class="nav-item me-3">
-                        <span class="text-white fw-bold">Halo, <?= htmlspecialchars($_SESSION['username']); ?>!</span>
+                        <span class="text-white fw-bold">Halo, <?= htmlspecialchars($_SESSION['username_admin']); ?>!</span>
                     </li>
                     <li class="nav-item">
                         <a href="logout.php" class="btn btn-danger btn-sm text-white"><i class="fas fa-sign-out-alt"></i> Logout</a>
