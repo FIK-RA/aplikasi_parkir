@@ -93,6 +93,7 @@ if (isset($_POST['login'])) {
     <title>Login - Sistem Manajemen Parkir</title>
     <!-- Menghubungkan ke file CSS -->
     <link rel="stylesheet" href="index.css">
+    <link src="index.js">
 </head>
 <body>
 
