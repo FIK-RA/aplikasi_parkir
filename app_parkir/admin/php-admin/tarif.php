@@ -16,7 +16,6 @@ if (isset($_POST['simpan_tarif'])) {
     $jenis = mysqli_real_escape_string($koneksi, $_POST['jenis_kendaraan']);
     $tarif = (int)$_POST['tarif_per_jam'];
 
-    // Cek apakah jenis kendaraan sudah ada
     $check = mysqli_query($koneksi, "SELECT * FROM tb_tarif WHERE jenis_kendaraan='$jenis'");
     if (mysqli_num_rows($check) > 0) {
         mysqli_query($koneksi, "UPDATE tb_tarif SET tarif_per_jam='$tarif' WHERE jenis_kendaraan='$jenis'");
@@ -70,12 +69,6 @@ $tarif_list = mysqli_query($koneksi, "SELECT * FROM tb_tarif ORDER BY id_tarif A
             </div>
         </div>
 
-        <?php if (isset($_GET['pesan'])): ?>
-            <p style="color: #16a34a; font-weight: bold; margin-bottom: 15px; padding: 10px; background: #dcfce7; border-radius: 5px;">
-                Tarif berhasil diperbarui!
-            </p>
-        <?php endif; ?>
-
         <!-- Form Setting Tarif -->
         <div class="form-box">
             <h3>Update Tarif Per Jam</h3>
@@ -113,7 +106,54 @@ $tarif_list = mysqli_query($koneksi, "SELECT * FROM tb_tarif ORDER BY id_tarif A
         </div>
     </div>
 
+    <!-- Pop-up Mengambang Toast -->
+    <div id="toastAlert" class="toast-popup">
+        <span class="toast-close" onclick="closeToast()">&times;</span>
+        <svg class="checkmark-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="23" fill="none"/>
+            <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+        <p id="toastMessage"></p>
+    </div>
+
     <script>
+        function showToast(message) {
+            const toast = document.getElementById('toastAlert');
+            if (!toast) return;
+            
+            document.getElementById('toastMessage').innerText = message;
+            toast.style.display = 'flex';
+
+            const timer = setTimeout(() => {
+                closeToast();
+            }, 3000);
+
+            toast.dataset.timer = timer;
+        }
+
+        function closeToast() {
+            const toast = document.getElementById('toastAlert');
+            if (toast) {
+                if (toast.dataset.timer) clearTimeout(toast.dataset.timer);
+                toast.style.display = 'none';
+            }
+        }
+
+        <?php if (isset($_GET['pesan'])): ?>
+            <?php 
+                $p = $_GET['pesan'];
+                $pesan_teks = "";
+                if ($p == 'sukses_tambah') $pesan_teks = "Data berhasil ditambahkan!";
+                elseif ($p == 'sukses_edit' || $p == 'sukses') $pesan_teks = "Data berhasil diperbarui!";
+                elseif ($p == 'sukses_hapus') $pesan_teks = "Data berhasil dihapus!";
+            ?>
+            <?php if (!empty($pesan_teks)): ?>
+                document.addEventListener("DOMContentLoaded", function() {
+                    showToast("<?= $pesan_teks; ?>");
+                });
+            <?php endif; ?>
+        <?php endif; ?>
+
         const btnToggle = document.getElementById('btnToggle');
         const btnCloseSidebar = document.getElementById('btnCloseSidebar');
         const sidebar = document.getElementById('sidebar');

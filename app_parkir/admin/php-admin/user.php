@@ -4,9 +4,9 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// 1. Jalur koneksi disesuaikan
 require_once '../../config/koneksi.php';
 
+// Validasi Akses Admin
 if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../../index.php");
     exit();
@@ -15,11 +15,7 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'admin') {
 $nama_user = $_SESSION['nama_lengkap'];
 $pesan = "";
 
-if (isset($_GET['pesan']) && $_GET['pesan'] == 'sukses_tambah') {
-    $pesan = "User berhasil ditambahkan!";
-}
-
-// PROSES TAMBAH USER
+// 1. PROSES TAMBAH USER
 if (isset($_POST['tambah'])) {
     $nama     = mysqli_real_escape_string($koneksi, $_POST['nama_lengkap']);
     $username = mysqli_real_escape_string($koneksi, $_POST['username']);
@@ -35,11 +31,11 @@ if (isset($_POST['tambah'])) {
     }
 }
 
-// PROSES HAPUS USER
+// 2. PROSES HAPUS USER
 if (isset($_GET['hapus'])) {
-    $id_user = $_GET['hapus'];
+    $id_user = (int)$_GET['hapus'];
     mysqli_query($koneksi, "DELETE FROM tb_user WHERE id_user='$id_user'");
-    header("Location: user.php");
+    header("Location: user.php?pesan=sukses_hapus");
     exit();
 }
 
@@ -53,13 +49,11 @@ $users = mysqli_query($koneksi, "SELECT * FROM tb_user ORDER BY id_user ASC");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kelola User - Sistem Parkir</title>
-    <!-- 2. Panggil dashboard.css untuk kerangka, user.css untuk styling tabel -->
     <link rel="stylesheet" href="../css-admin/dashboard.css?v=<?= time(); ?>">
     <link rel="stylesheet" href="../css-admin/user.css?v=<?= time(); ?>">
 </head>
 <body>
 
-    <!-- Overlay & Sidebar yang sama dengan Dashboard -->
     <div class="overlay" id="overlay"></div>
 
     <div class="sidebar" id="sidebar">
@@ -78,7 +72,6 @@ $users = mysqli_query($koneksi, "SELECT * FROM tb_user ORDER BY id_user ASC");
         <a href="../../logout.php" class="btn-logout">Logout</a>
     </div>
 
-    <!-- Main Content Area -->
     <div class="content">
         <div class="header">
             <div class="header-left">
@@ -89,10 +82,6 @@ $users = mysqli_query($koneksi, "SELECT * FROM tb_user ORDER BY id_user ASC");
                 </div>
             </div>
         </div>
-
-        <?php if($pesan): ?>
-            <p style="color: #16a34a; font-weight: bold; margin-bottom: 15px; padding: 10px; background: #dcfce7; border-radius: 5px;"><?= $pesan; ?></p>
-        <?php endif; ?>
 
         <!-- Form Tambah User -->
         <div class="form-box">
@@ -158,22 +147,61 @@ $users = mysqli_query($koneksi, "SELECT * FROM tb_user ORDER BY id_user ASC");
         </div>
     </div>
 
-    <!-- Script Kontrol Sidebar & Overlay -->
+    <!-- HTML Pop-up Mengambang Toast -->
+    <div id="toastAlert" class="toast-popup">
+        <span class="toast-close" onclick="closeToast()">&times;</span>
+        <svg class="checkmark-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="23" fill="none"/>
+            <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+        <p id="toastMessage"></p>
+    </div>
+
     <script>
+        function showToast(message) {
+            const toast = document.getElementById('toastAlert');
+            if (!toast) return;
+            
+            document.getElementById('toastMessage').innerText = message;
+            toast.style.display = 'flex';
+
+            const timer = setTimeout(() => {
+                closeToast();
+            }, 3000);
+
+            toast.dataset.timer = timer;
+        }
+
+        function closeToast() {
+            const toast = document.getElementById('toastAlert');
+            if (toast) {
+                if (toast.dataset.timer) clearTimeout(toast.dataset.timer);
+                toast.style.display = 'none';
+            }
+        }
+
+        <?php if (isset($_GET['pesan'])): ?>
+            <?php 
+                $p = $_GET['pesan'];
+                $pesan_teks = "";
+                if ($p == 'sukses_tambah') $pesan_teks = "User berhasil ditambahkan!";
+                elseif ($p == 'sukses_edit' || $p == 'sukses') $pesan_teks = "Data user berhasil diperbarui!";
+                elseif ($p == 'sukses_hapus') $pesan_teks = "User berhasil dihapus!";
+            ?>
+            <?php if (!empty($pesan_teks)): ?>
+                document.addEventListener("DOMContentLoaded", function() {
+                    showToast("<?= $pesan_teks; ?>");
+                });
+            <?php endif; ?>
+        <?php endif; ?>
+
         const btnToggle = document.getElementById('btnToggle');
         const btnCloseSidebar = document.getElementById('btnCloseSidebar');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('overlay');
 
-        function openSidebar() {
-            sidebar.classList.add('show');
-            overlay.classList.add('show');
-        }
-
-        function closeSidebar() {
-            sidebar.classList.remove('show');
-            overlay.classList.remove('show');
-        }
+        function openSidebar() { sidebar.classList.add('show'); overlay.classList.add('show'); }
+        function closeSidebar() { sidebar.classList.remove('show'); overlay.classList.remove('show'); }
 
         btnToggle.addEventListener('click', openSidebar);
         btnCloseSidebar.addEventListener('click', closeSidebar);

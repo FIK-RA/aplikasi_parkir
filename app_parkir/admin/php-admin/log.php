@@ -16,7 +16,7 @@ $log_aktivitas = mysqli_query($koneksi, "
     SELECT l.*, u.nama_lengkap, u.role 
     FROM tb_log_aktivitas l 
     LEFT JOIN tb_user u ON l.id_user = u.id_user 
-    ORDER BY l.waktu DESC
+    ORDER BY l.waktu_aktivitas DESC
 ");
 ?>
 
@@ -79,7 +79,7 @@ $log_aktivitas = mysqli_query($koneksi, "
                     ?>
                     <tr>
                         <td><?= $no++; ?></td>
-                        <td><span style="color: #64748b; font-size: 13px;"><?= date('d M Y, H:i:s', strtotime($row['waktu'])); ?></span></td>
+                        <td><span style="color: #64748b; font-size: 13px;"><?= date('d M Y, H:i:s', strtotime($row['waktu_aktivitas'])); ?></span></td>
                         <td><b><?= htmlspecialchars($row['nama_lengkap'] ?? 'System'); ?></b></td>
                         <td>
                             <span style="background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">

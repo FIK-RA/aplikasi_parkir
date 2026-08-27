@@ -6,6 +6,7 @@ header("Pragma: no-cache");
 
 require_once '../../config/koneksi.php';
 
+// Validasi Akses Admin
 if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../../index.php");
     exit();
@@ -20,7 +21,6 @@ if (isset($_POST['tambah'])) {
     $jenis      = mysqli_real_escape_string($koneksi, $_POST['jenis_kendaraan']);
     $id_user    = $_SESSION['id_user'];
 
-    // Validasi Format Plat Nomor Regex
     if (!preg_match('/^[A-Z]{1,2}\s?[0-9]{1,4}\s?[A-Z]{1,3}$/', $plat_nomor)) {
         $pesan_error = "Format Plat Nomor tidak valid! Contoh: B 1234 ABC, AB 123 CD, atau D 1 A.";
     } else {
@@ -55,11 +55,11 @@ if (isset($_POST['edit'])) {
     }
 }
 
-// 3. PROSES HAPUS KENDARAAN
+// 3. PROSES HAPUS KENDARAAN (Aman setelah validasi session)
 if (isset($_GET['hapus'])) {
     $id = (int)$_GET['hapus'];
     mysqli_query($koneksi, "DELETE FROM tb_kendaraan WHERE id_kendaraan='$id'");
-    header("Location: kendaraan.php");
+    header("Location: kendaraan.php?pesan=sukses_hapus");
     exit();
 }
 
@@ -124,12 +124,6 @@ $motor_list = mysqli_query($koneksi, "SELECT * FROM tb_kendaraan WHERE LOWER(jen
             </p>
         <?php endif; ?>
 
-        <?php if (isset($_GET['pesan'])): ?>
-            <p style="color: #16a34a; font-weight: bold; margin-bottom: 15px; padding: 10px; background: #dcfce7; border-radius: 5px;">
-                Data kendaraan berhasil diperbarui!
-            </p>
-        <?php endif; ?>
-
         <!-- Form Tambah / Edit Kendaraan -->
         <div class="form-box">
             <h3><?= $edit_data ? 'Edit Data Kendaraan' : 'Tambah Registrasi Kendaraan Baru'; ?></h3>
@@ -138,7 +132,6 @@ $motor_list = mysqli_query($koneksi, "SELECT * FROM tb_kendaraan WHERE LOWER(jen
                     <input type="hidden" name="id_kendaraan" value="<?= $edit_data['id_kendaraan']; ?>">
                 <?php endif; ?>
 
-                <!-- Input Plat Nomor dengan Auto-Kapital dan Batasan Regex -->
                 <input type="text" 
                        name="plat_nomor" 
                        id="plat_nomor"
@@ -242,7 +235,54 @@ $motor_list = mysqli_query($koneksi, "SELECT * FROM tb_kendaraan WHERE LOWER(jen
         </div>
     </div>
 
+    <!-- Pop-up Mengambang Toast -->
+    <div id="toastAlert" class="toast-popup">
+        <span class="toast-close" onclick="closeToast()">&times;</span>
+        <svg class="checkmark-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="23" fill="none"/>
+            <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+        <p id="toastMessage"></p>
+    </div>
+
     <script>
+        function showToast(message) {
+            const toast = document.getElementById('toastAlert');
+            if (!toast) return;
+            
+            document.getElementById('toastMessage').innerText = message;
+            toast.style.display = 'flex';
+
+            const timer = setTimeout(() => {
+                closeToast();
+            }, 3000);
+
+            toast.dataset.timer = timer;
+        }
+
+        function closeToast() {
+            const toast = document.getElementById('toastAlert');
+            if (toast) {
+                if (toast.dataset.timer) clearTimeout(toast.dataset.timer);
+                toast.style.display = 'none';
+            }
+        }
+
+        <?php if (isset($_GET['pesan'])): ?>
+            <?php 
+                $p = $_GET['pesan'];
+                $pesan_teks = "";
+                if ($p == 'sukses_tambah') $pesan_teks = "Data berhasil ditambahkan!";
+                elseif ($p == 'sukses_edit' || $p == 'sukses') $pesan_teks = "Data berhasil diperbarui!";
+                elseif ($p == 'sukses_hapus') $pesan_teks = "Data berhasil dihapus!";
+            ?>
+            <?php if (!empty($pesan_teks)): ?>
+                document.addEventListener("DOMContentLoaded", function() {
+                    showToast("<?= $pesan_teks; ?>");
+                });
+            <?php endif; ?>
+        <?php endif; ?>
+
         const btnToggle = document.getElementById('btnToggle');
         const btnCloseSidebar = document.getElementById('btnCloseSidebar');
         const sidebar = document.getElementById('sidebar');
