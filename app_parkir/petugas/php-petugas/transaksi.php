@@ -16,26 +16,26 @@ $pesan = "";
 $tipe_pesan = "";
 $cetak_id_baru = null;
 
-// 1. INPUT KENDARAAN MASUK
+// 1. INPUT KENDARAAN MASUK (HANYA BISA DARI DATA KENDARAAN YANG SUDAH TERDAFTAR)
 if (isset($_POST['parkir_masuk'])) {
-    $plat_nomor = strtoupper(trim(mysqli_real_escape_string($koneksi, $_POST['plat_nomor'])));
-    $jenis      = mysqli_real_escape_string($koneksi, $_POST['jenis_kendaraan']);
-    $warna      = mysqli_real_escape_string($koneksi, $_POST['warna']);
-    $id_area    = (int)$_POST['id_area'];
+    $id_kendaraan = (int)$_POST['id_kendaraan'];
+    $id_area      = (int)$_POST['id_area'];
 
+    // Cek ketersediaan area
     $q_area = mysqli_query($koneksi, "SELECT * FROM tb_area_parkir WHERE id_area='$id_area'");
     $d_area = mysqli_fetch_assoc($q_area);
 
-    if ($d_area && $d_area['terisi'] < $d_area['kapasitas']) {
-        $q_cek_knd = mysqli_query($koneksi, "SELECT id_kendaraan FROM tb_kendaraan WHERE plat_nomor='$plat_nomor'");
-        if (mysqli_num_rows($q_cek_knd) > 0) {
-            $id_kendaraan = mysqli_fetch_assoc($q_cek_knd)['id_kendaraan'];
-        } else {
-            mysqli_query($koneksi, "INSERT INTO tb_kendaraan (plat_nomor, jenis_kendaraan, warna, id_user) VALUES ('$plat_nomor', '$jenis', '$warna', '$id_user_login')");
-            $id_kendaraan = mysqli_insert_id($koneksi);
-        }
+    // Cek data kendaraan terdaftar
+    $q_knd = mysqli_query($koneksi, "SELECT * FROM tb_kendaraan WHERE id_kendaraan='$id_kendaraan'");
+    $d_knd = mysqli_fetch_assoc($q_knd);
 
-        // Ambil ID Tarif Sesuai Jenis Kendaraan Dinamis Dari tb_tarif
+    if (!$d_knd) {
+        $pesan = "Gagal: Data kendaraan tidak ditemukan!";
+        $tipe_pesan = "error";
+    } elseif ($d_area && $d_area['terisi'] < $d_area['kapasitas']) {
+        $jenis = $d_knd['jenis_kendaraan'];
+
+        // Ambil ID Tarif Sesuai Jenis Kendaraan
         $q_tarif = mysqli_query($koneksi, "SELECT id_tarif FROM tb_tarif WHERE LOWER(jenis_kendaraan)='".strtolower($jenis)."' LIMIT 1");
         $d_tarif = mysqli_fetch_assoc($q_tarif);
         $id_tarif = $d_tarif['id_tarif'] ?? NULL;
@@ -55,11 +55,10 @@ if (isset($_POST['parkir_masuk'])) {
     }
 }
 
-// 2. PROSES SCAN BARCODE / KELUAR PARKIR (DINAMIS DENGAN TB_TARIF)
+// 2. PROSES SCAN BARCODE / KELUAR PARKIR
 if (isset($_POST['scan_barcode']) || isset($_POST['parkir_keluar'])) {
     $id_parkir = (int)($_POST['scan_barcode'] ?? $_POST['id_parkir']);
 
-    // JOIN ke tb_tarif & tb_kendaraan untuk kalkulasi dinamis
     $q_trx = mysqli_query($koneksi, "SELECT t.*, tr.tarif_per_jam, k.jenis_kendaraan 
                                      FROM tb_transaksi t 
                                      JOIN tb_kendaraan k ON t.id_kendaraan = k.id_kendaraan
@@ -74,9 +73,8 @@ if (isset($_POST['scan_barcode']) || isset($_POST['parkir_keluar'])) {
         $diff         = $waktu_masuk->diff($waktu_keluar);
         
         $durasi_jam = $diff->h + ($diff->days * 24);
-        if ($diff->i > 0 || $durasi_jam == 0) { $durasi_jam += 1; } // Minimal 1 jam / pembulatan ke atas
+        if ($diff->i > 0 || $durasi_jam == 0) { $durasi_jam += 1; }
 
-        // Ambil tarif dinamis per jam (jika id_tarif null, fallback cari berdasarkan jenis kendaraan)
         $tarif_per_jam = $d_trx['tarif_per_jam'];
         if (!$tarif_per_jam) {
             $jenis_knd = strtolower($d_trx['jenis_kendaraan']);
@@ -123,6 +121,8 @@ if (isset($_GET['hapus'])) {
     }
 }
 
+// Query Pilihan
+$list_kendaraan = mysqli_query($koneksi, "SELECT * FROM tb_kendaraan ORDER BY plat_nomor ASC");
 $areas = mysqli_query($koneksi, "SELECT * FROM tb_area_parkir");
 $semua_transaksi = mysqli_query($koneksi, "SELECT t.*, k.plat_nomor, k.jenis_kendaraan, a.nama_area 
                                            FROM tb_transaksi t 
@@ -184,7 +184,7 @@ $semua_transaksi = mysqli_query($koneksi, "SELECT t.*, k.plat_nomor, k.jenis_ken
                 <button class="menu-toggle" id="btnToggle" title="Buka Menu">☰</button>
                 <div>
                     <h2>Kelola Transaksi Parkir 🎫</h2>
-                    <p>Input kedatangan kendaraan dan scan barcode selesai parkir.</p>
+                    <p>Pilih kendaraan terdaftar dan scan barcode selesai parkir.</p>
                 </div>
             </div>
         </div>
@@ -194,20 +194,17 @@ $semua_transaksi = mysqli_query($koneksi, "SELECT t.*, k.plat_nomor, k.jenis_ken
                 <h3>1. Input Parkir Masuk 🚗</h3>
                 <form action="" method="POST">
                     <div class="input-group">
-                        <label>Nomor Plat Kendaraan</label>
-                        <input type="text" name="plat_nomor" placeholder="Contoh: B 1234 ABC" style="text-transform: uppercase;" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Jenis Kendaraan</label>
-                        <select name="jenis_kendaraan" required>
-                            <option value="Motor">Motor</option>
-                            <option value="Mobil">Mobil</option>
+                        <label>Pilih Kendaraan (Terdaftar)</label>
+                        <select name="id_kendaraan" required>
+                            <option value="">-- Pilih Plat Nomor Kendaraan --</option>
+                            <?php while($k = mysqli_fetch_assoc($list_kendaraan)): ?>
+                                <option value="<?= $k['id_kendaraan']; ?>">
+                                    <?= strtoupper($k['plat_nomor']); ?> - <?= ucfirst($k['jenis_kendaraan']); ?> (<?= $k['warna']; ?>)
+                                </option>
+                            <?php endwhile; ?>
                         </select>
                     </div>
-                    <div class="input-group">
-                        <label>Warna / Ciri Fisik</label>
-                        <input type="text" name="warna" placeholder="Misal: Hitam Glossy" required>
-                    </div>
+
                     <div class="input-group">
                         <label>Area Parkir</label>
                         <select name="id_area" required>
